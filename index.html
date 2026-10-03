@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YT Clip Studio Pro — AI-Powered Clip Maker</title>
+<style>
+  :root {
+    --bg: #080a0f;
+    --panel: #10131b;
+    --panel-2: #161b26;
+    --panel-3: #1c2230;
+    --border: #252c3d;
+    --border-2: #2f3850;
+    --text: #e8ebf2;
+    --muted: #7d8699;
+    --muted-2: #5a6275;
+    --accent: #ff3b5c;
+    --accent-2: #7c5cff;
+    --accent-3: #00d4aa;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --err: #ef4444;
+    --glow: 0 0 20px rgba(124, 92, 255, 0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  ::selection { background: rgba(124, 92, 255, 0.35); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(900px 500px at 15% -5%, rgba(124, 92, 255, 0.10) 0%, transparent 60%),
+      radial-gradient(700px 400px at 85% 5%, rgba(255, 59, 92, 0.06) 0%, transparent 60%);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3d475f; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    background: rgba(8, 10, 15, 0.82);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 22px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 15px; font-weight: 800; letter-spacing: -0.4px;
+    white-space: nowrap;
+  }
+  .logo-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    box-shadow: var(--glow);
+  }
+  .logo-icon svg { width: 15px; height: 15px; }
+  .badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    padding: 3px 9px; border-radius: 999px; text-transform: uppercase;
+  }
+  .badge.pro { background: linear-gradient(135deg, var(--accent-3), #00a2ff); }
+  .topbar-spacer { flex: 1; }
+  .topbar-status {
+    font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2);
+    transition: all .3s;
+  }
+  .status-dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .status-dot.busy { background: var(--warn); box-shadow: 0 0 8px var(--warn); animation: pulse 1s infinite; }
+  .status-dot.err { background: var(--err); box-shadow: 0 0 8px var(--err); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  kbd {
+    background: var(--panel-3); border: 1px solid var(--border-2);
+    border-bottom-width: 2px; border-radius: 5px;
+    padding: 1px 6px; font-size: 10.5px;
+    font-family: ui-monospace, "SF Mono", monospace; color: #b4bccf;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr);
+    gap: 18px;
+    padding: 18px 22px 60px;
+    max-width: 1600px; margin: 0 auto;
+  }
+  @media (max-width: 1060px) { .layout { grid-template-columns: 1fr; } }
+
+  .col { display: flex; flex-direction: column; gap: 16px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 9px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.015), transparent);
+  }
+  .card-head h2 {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.3px; color: var(--muted);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .card-head h2 svg { width: 14px; height: 14px; opacity: .7; }
+  .card-head .spacer { flex: 1; }
+  .card-body { padding: 15px 16px; }
+
+  .chip {
+    font-size: 10.5px; font-weight: 600;
+    background: var(--panel-3); border: 1px solid var(--border-2);
+    padding: 2px 8px; border-radius: 999px; color: var(--muted);
+  }
+  .chip.ok { color: var(--ok); border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.08); }
+  .chip.warn { color: var(--warn); border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+  .chip.err { color: var(--err); border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
+
+  input[type="text"], input[type="password"], select, textarea {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border-2);
+    color: var(--text);
+    padding: 10px 13px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-2);
+    box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.12);
+  }
+  input::placeholder { color: var(--muted-2); }
+  textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+  label.field-label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+
+  button {
+    font-family: inherit; font-size: 12.5px; font-weight: 600;
+    color: var(--text);
+    background: var(--panel-3);
+    border: 1px solid var(--border-2);
+    padding: 9px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .14s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    white-space: nowrap; user-select: none;
+  }
+  button:hover:not(:disabled) { border-color: #404a66; background: #212938; }
+  button:active:not(:disabled) { transform: scale(0.975); }
+  button:disabled { opacity: .38; cursor: not-allowed; }
+  button svg { width: 14px; height: 14px; }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none; color: #fff;
+    box-shadow: 0 4px 14px rgba(124, 92, 255, 0.25);
+  }
+  button.primary:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 6px 20px rgba(124, 92, 255, 0.35); }
+  button.accent {
+    background: linear-gradient(135deg, var(--accent-3), #00a2ff);
+    border: none; color: #041a16; font-weight: 700;
+  }
+  button.ghost { background: transparent; }
+  button.ghost:hover:not(:disabled) { background: var(--panel-3); }
+  button.danger { color: #ff8a9b; border-color: rgba(239,68,68,.3); }
+  button.danger:hover:not(:disabled) { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.5); }
+  button.tiny { padding: 5px 9px; font-size: 11.5px; border-radius: 8px; }
+  button.icon-only { padding: 7px; width: 32px; height: 32px; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-row > button { flex: 1; min-width: 110px; }
+
+  .url-bar { display: flex; gap: 9px; }
+  .url-bar input { flex: 1; font-family: ui-monospace, "SF Mono", monospace; font-size: 13px; }
+  @media (max-width: 560px) { .url-bar { flex-direction: column; } }
+
+  .player-shell {
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    background: #000; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  #player, .player-shell iframe { width: 100%; height: 100%; display: block; }
+  .player-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; color: var(--muted); text-align: center; padding: 20px;
+    background: radial-gradient(circle at 50% 40%, rgba(124,92,255,.06), transparent 70%);
+  }
+  .player-placeholder svg { width: 52px; height: 52px; opacity: .3; }
+  .player-placeholder .title { font-size: 14px; font-weight: 600; color: #9aa3b8; }
+  .player-placeholder .sub { font-size: 12px; color: var(--muted-2); max-width: 320px; line-height: 1.6; }
+
+  .controls-row {
+    display: flex; align-items: center; gap: 9px;
+    margin-top: 12px; flex-wrap: wrap;
+  }
+  .timecode {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 12.5px; letter-spacing: .3px;
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    padding: 8px 12px; border-radius: 9px; white-space: nowrap;
+    color: var(--muted);
+  }
+  .timecode b { color: var(--accent); font-weight: 700; }
+
+  .progress-track {
+    flex: 1; min-width: 140px; height: 7px;
+    background: var(--panel-3); border-radius: 999px;
+    position: relative; cursor: pointer;
+  }
+  .progress-fill {
+    position: absolute; inset: 0 auto 0 0; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: 999px; pointer-events: none;
+    transition: width .08s linear;
+  }
+  .progress-mark {
+    position: absolute; top: -4px; bottom: -4px; width: 2px;
+    border-radius: 2px; pointer-events: none; display: none;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .progress-mark.in { background: var(--ok); color: var(--ok); }
+  .progress-mark.out { background: var(--accent); color: var(--accent); }
+  .progress-mark.ai { background: var(--accent-3); color: var(--accent-3); opacity: .7; width: 1.5px; }
+
+  .io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .io-box {
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    border-radius: 11px; padding: 11px 13px; transition: border-color .15s;
+  }
+  .io-box.in:hover { border-color: rgba(34,197,94,.45); }
+  .io-box.out:hover { border-color: rgba(255,59,92,.45); }
+  .io-box .io-label {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--muted-2); margin-bottom: 3px;
+  }
+  .io-box .io-val {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 17px; font-weight: 700; letter-spacing: .3px;
+  }
+  .io-box.in .io-val { color: var(--ok); }
+  .io-box.out .io-val { color: var(--accent); }
+  .io-box .io-btns { display: flex; gap: 6px; margin-top: 8px; }
+  .io-box .io-btns button { flex: 1; padding: 5px; font-size: 11px; }
+
+  .tabs {
+    display: flex; gap: 3px; padding: 3px;
+    background: var(--panel-2); border-radius: 11px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1; padding: 8px 10px; font-size: 12px; font-weight: 600;
+    border-radius: 8px; cursor: pointer; text-align: center;
+    color: var(--muted); border: none; background: transparent;
+    transition: all .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    background: var(--panel-3); color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .clip-list { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+  .clip-item {
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    border-radius: 11px; padding: 11px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: border-color .15s, background .15s;
+  }
+  .clip-item:hover { border-color: #3d475f; }
+  .clip-item.playing { border-color: var(--accent); background: rgba(255,59,92,.04); }
+  .clip-item.ai-generated { border-left: 3px solid var(--accent-3); }
+  .clip-item .clip-top { display: flex; align-items: center; gap: 8px; }
+  .clip-name {
+    flex: 1; background: transparent; border: none;
+    color: var(--text); font-size: 13px; font-weight: 650;
+    padding: 2px 0; outline: none; min-width: 0;
+  }
+  .clip-name:focus { border-bottom: 1.5px solid var(--accent-2); }
+  .clip-score {
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  .clip-score.hot { background: rgba(255,59,92,.15); color: #ff7a8f; }
+  .clip-score.warm { background: rgba(245,158,11,.15); color: var(--warn); }
+  .clip-score.cool { background: rgba(124,92,255,.15); color: #a78bfa; }
+
+  .clip-meta {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 11px; color: var(--muted-2);
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .clip-meta span { display: flex; align-items: center; gap: 4px; }
+  .clip-meta b { color: var(--muted); font-weight: 600; }
+  .clip-actions { display: flex; gap: 5px; }
+  .clip-actions button {
+    padding: 5px 8px; font-size: 11px; border-radius: 7px;
+    background: transparent; border: 1px solid var(--border);
+  }
+  .clip-actions button:hover:not(:disabled) { background: var(--panel-3); }
+  .clip-tag {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 5px;
+    background: rgba(0,212,170,.12); color: var(--accent-3);
+  }
+
+  .empty-state {
+    text-align: center; color: var(--muted-2); font-size: 12.5px;
+    padding: 34px 16px; border: 1.5px dashed var(--border-2);
+    border-radius: 11px; line-height: 1.7;
+  }
+  .empty-state svg { width: 34px; height: 34px; opacity: .25; margin-bottom: 8px; }
+
+  .ai-status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; border-radius: 9px;
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    font-size: 12px; color: var(--muted); margin-bottom: 12px;
+  }
+  .ai-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex-shrink: 0; }
+  .ai-status.on .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .ai-status.working .dot { background: var(--warn); animation: pulse 1s infinite; }
+  .ai-status.err .dot { background: var(--err); }
+
+  .ai-log {
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 11px; line-height: 1.7; color: var(--muted);
+    background: #0a0d14; border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 12px;
+    max-height: 180px; overflow-y: auto; margin-top: 10px;
+  }
+  .ai-log .ln-ok { color: var(--ok); }
+  .ai-log .ln-err { color: var(--err); }
+  .ai-log .ln-info { color: #8fa8d8; }
+  .ai-log .ln-warn { color: var(--warn); }
+  .ai-log .ln-dim { color: var(--muted-2); }
+
+  .transcript-box {
+    font-size: 12px; line-height: 1.75; color: #b0b8cc;
+    background: #0a0d14; border: 1px solid var(--border);
+    border-radius: 9px; padding: 12px 14px;
+    max-height: 300px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .transcript-box .ts {
+    color: var(--accent-3); font-weight: 600;
+    font-family: ui-monospace, monospace; margin-right: 6px;
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border-2);
+    border-radius: 18px; width: 100%; max-width: 560px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    animation: modalIn .22s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform: translateY(14px) scale(.97);} to { opacity:1; transform:none;} }
+  .modal-head {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-head h3 { font-size: 15px; font-weight: 700; flex: 1; }
+  .modal-body { padding: 18px 20px; }
+  .modal-foot {
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    display: flex; gap: 9px; justify-content: flex-end;
+  }
+
+  .help-text { font-size: 11.5px; color: var(--muted-2); line-height: 1.7; margin-top: 6px; }
+  .help-text a { color: var(--accent-2); text-decoration: none; }
+  .help-text a:hover { text-decoration: underline; }
+
+  .model-picker { display: flex; gap: 8px; align-items: stretch; }
+  .model-picker select { flex: 1; font-size: 13px; }
+  .model-picker select:disabled { opacity: .55; }
+  .model-picker .icon-only { width: 40px; height: auto; align-self: stretch; }
+
+  .model-meta {
+    margin-top: 8px; padding: 10px 12px;
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    border-radius: 9px; font-size: 11.5px; color: var(--muted); line-height: 1.65;
+  }
+  .model-meta .kv { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .model-meta .kv b { color: #b4bccf; font-weight: 600; }
+  .model-meta .kv span {
+    font-family: ui-monospace, monospace; font-size: 10.5px;
+    background: var(--panel-3); border: 1px solid var(--border-2);
+    padding: 1px 7px; border-radius: 6px; color: #9aa3b8;
+  }
+
+  .model-status {
+    font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .model-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2); flex-shrink: 0; }
+  .model-status.live .dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .model-status.cached .dot { background: var(--accent-3); }
+  .model-status.loading .dot { background: var(--warn); animation: pulse .9s infinite; }
+  .model-status.err .dot { background: var(--err); }
+
+  .toast-wrap {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    z-index: 900; display: flex; flex-direction: column; gap: 8px; align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--panel-3); border: 1px solid var(--border-2);
+    padding: 11px 18px; border-radius: 11px;
+    font-size: 12.5px; font-weight: 500; color: var(--text);
+    box-shadow: 0 10px 34px rgba(0,0,0,.5);
+    display: flex; align-items: center; gap: 9px;
+    animation: toastIn .24s ease;
+    max-width: 90vw;
+  }
+  @keyframes toastIn { from { opacity:0; transform: translateY(16px);} to { opacity:1; transform:none;} }
+  .toast.ok { border-color: rgba(34,197,94,.5); }
+  .toast.err { border-color: rgba(239,68,68,.5); }
+  .toast.warn { border-color: rgba(245,158,11,.5); }
+  .toast .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .toast.ok .dot { background: var(--ok); }
+  .toast.err .dot { background: var(--err); }
+  .toast.warn .dot { background: var(--warn); }
+
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.15);
+    border-top-color: #fff; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px,1fr)); gap: 8px; }
+  .stat {
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    border-radius: 10px; padding: 10px 12px; text-align: center;
+  }
+  .stat .num { font-size: 19px; font-weight: 800; letter-spacing: -.5px; }
+  .stat .lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted-2); margin-top: 2px; }
+
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    font-size: 10.5px; font-weight: 600; padding: 4px 10px;
+    border-radius: 999px; border: 1px solid var(--border-2);
+    background: var(--panel-2); color: var(--muted); cursor: pointer;
+    transition: all .14s;
+  }
+  .pill:hover { border-color: var(--accent-2); color: var(--text); }
+  .pill.active { background: rgba(124,92,255,.15); border-color: var(--accent-2); color: #c4b5fd; }
+
+  .footer {
+    text-align: center; padding: 0 22px 40px;
+    color: var(--muted-2); font-size: 11.5px; line-height: 1.8;
+    max-width: 1600px; margin: 0 auto;
+  }
+  .footer b { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="23 7 16 12 23 17 23 7" fill="#fff" stroke="none"/>
+        <rect x="1" y="5" width="15" height="14" rx="3"/>
+      </svg>
+    </div>
+    <span>YT Clip Studio</span>
+  </div>
+  <span class="badge pro">PRO</span>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-status">
+    <span class="status-dot" id="apiStatusDot"></span>
+    <span id="apiStatusText">API belum dikonfigurasi</span>
+  </div>
+  <button class="ghost tiny" id="openSettingsBtn" title="Pengaturan API">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </button>
+</div>
+
+<div class="layout">
+
+  <div class="col">
+
+    <div class="card">
+      <div class="card-body">
+        <div class="url-bar">
+          <input type="text" id="urlInput" placeholder="https://youtu.be/kaIrPcXh9tg?si=..." />
+          <button class="primary" id="loadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Muat
+          </button>
+        </div>
+        <div class="help-text" style="margin-top:8px">
+          Support: <code style="color:#9aa3b8">youtu.be/ID?si=…</code> ·
+          <code style="color:#9aa3b8">youtube.com/watch?v=ID</code> ·
+          <code style="color:#9aa3b8">/shorts/ID</code> ·
+          <code style="color:#9aa3b8">/embed/ID</code> · ID mentah
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="3"/></svg>
+          Pemutar
+        </h2>
+        <div class="spacer"></div>
+        <span class="chip" id="videoIdChip">—</span>
+      </div>
+      <div class="card-body">
+        <div class="player-shell">
+          <div id="player"></div>
+          <div class="player-placeholder" id="playerPlaceholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
+            <div class="title">Belum ada video dimuat</div>
+            <div class="sub">Tempel URL YouTube di atas, lalu klik <b>Muat</b>.</div>
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <button id="playBtn" title="Play / Pause (Space)">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>
+          </button>
+          <button class="icon-only" id="back10Btn" title="Mundur 10 detik">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+          </button>
+          <button class="icon-only" id="fwd10Btn" title="Maju 10 detik">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+          </button>
+          <div class="timecode">
+            <b id="curTime">00:00.0</b> / <span id="durTime">00:00.0</span>
+          </div>
+          <div class="progress-track" id="progressTrack">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-mark in" id="markInEl"></div>
+            <div class="progress-mark out" id="markOutEl"></div>
+            <div id="aiMarksContainer"></div>
+          </div>
+          <button class="icon-only" id="speedBtn" title="Kecepatan">1×</button>
+          <button class="icon-only" id="muteBtn" title="Mute / Unmute">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+          </button>
+        </div>
+
+        <div class="io-grid">
+          <div class="io-box in">
+            <div class="io-label">In Point</div>
+            <div class="io-val" id="inVal">--:--.-</div>
+            <div class="io-btns">
+              <button class="tiny" id="markInBtn">Tandai <kbd>I</kbd></button>
+              <button class="tiny ghost" id="clearInBtn">✕</button>
+            </div>
+          </div>
+          <div class="io-box out">
+            <div class="io-label">Out Point</div>
+            <div class="io-val" id="outVal">--:--.-</div>
+            <div class="io-btns">
+              <button class="tiny" id="markOutBtn">Tandai <kbd>O</kbd></button>
+              <button class="tiny ghost" id="clearOutBtn">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:12px">
+          <button class="primary" id="addClipBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Tambah Klip <kbd>C</kbd>
+          </button>
+          <button class="ghost" id="resetIOBtn">Reset In/Out</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          Analisis AI (Gemini)
+        </h2>
+        <div class="spacer"></div>
+        <span class="chip" id="aiModelChip">—</span>
+      </div>
+      <div class="card-body">
+        <div class="ai-status" id="aiStatus">
+          <span class="dot"></span>
+          <span id="aiStatusText">API key belum diatur. Klik <b>Settings</b> untuk mengisi.</span>
+        </div>
+
+        <div class="tabs" id="aiTabs">
+          <button class="tab active" data-tab="tab-transcript">📝 Transkrip</button>
+          <button class="tab" data-tab="tab-highlight">✨ Highlight</button>
+          <button class="tab" data-tab="tab-custom">🎯 Custom</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="tab-content active" id="tab-transcript">
+            <p class="help-text" style="margin-bottom:10px">
+              Ambil transkrip video lengkap dengan timestamp. Gemini memproses audio + frame visual untuk hasil akurat.
+            </p>
+            <div class="btn-row">
+              <button class="accent" id="fetchTranscriptBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Ambil Transkrip
+              </button>
+              <button class="ghost" id="copyTranscriptBtn" disabled>📋 Copy</button>
+            </div>
+            <div class="transcript-box hidden" id="transcriptBox" style="margin-top:12px"></div>
+          </div>
+
+          <div class="tab-content" id="tab-highlight">
+            <p class="help-text" style="margin-bottom:10px">
+              AI akan menganalisis video dan merekomendasikan momen-momen terbaik untuk dijadikan klip pendek.
+            </p>
+            <div class="field">
+              <label class="field-label">Jumlah klip</label>
+              <select id="highlightCount">
+                <option value="3">3 klip</option>
+                <option value="5" selected>5 klip</option>
+                <option value="8">8 klip</option>
+                <option value="10">10 klip</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Durasi target per klip</label>
+              <select id="highlightDuration">
+                <option value="15">~15 detik (Shorts/TikTok)</option>
+                <option value="30" selected>~30 detik</option>
+                <option value="45">~45 detik</option>
+                <option value="60">~60 detik</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Fokus konten</label>
+              <div class="pill-row" id="focusPills">
+                <span class="pill active" data-val="general">Umum</span>
+                <span class="pill" data-val="funny">Lucu</span>
+                <span class="pill" data-val="educational">Edukasi</span>
+                <span class="pill" data-val="emotional">Emosional</span>
+                <span class="pill" data-val="controversial">Kontroversial</span>
+                <span class="pill" data-val="insight">Insight</span>
+              </div>
+            </div>
+            <button class="primary" id="findHighlightsBtn" style="width:100%">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></svg>
+              Cari Highlight Otomatis
+            </button>
+          </div>
+
+          <div class="tab-content" id="tab-custom">
+            <p class="help-text" style="margin-bottom:10px">
+              Tanya apa saja tentang video ini. AI akan menjawab berdasarkan konten visual + audio.
+            </p>
+            <div class="field">
+              <textarea id="customPrompt" placeholder="Contoh: Di menit berapa pembicara menjelaskan tentang investasi saham? Berikan timestamp persisnya."></textarea>
+            </div>
+            <button class="primary" id="customAskBtn" style="width:100%">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              Tanya AI
+            </button>
+            <div class="transcript-box hidden" id="customAnswerBox" style="margin-top:12px"></div>
+          </div>
+        </div>
+
+        <div class="ai-log hidden" id="aiLog"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col">
+
+    <div class="card">
+      <div class="card-body">
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="num" id="statClips">0</div>
+            <div class="lbl">Klip</div>
+          </div>
+          <div class="stat">
+            <div class="num" id="statDuration">0s</div>
+            <div class="lbl">Total Durasi</div>
+          </div>
+          <div class="stat">
+            <div class="num" id="statAI">0</div>
+            <div class="lbl">AI Clip</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="flex:1">
+      <div class="card-head">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Daftar Klip
+        </h2>
+        <div class="spacer"></div>
+        <span class="chip" id="clipCountChip">0</span>
+      </div>
+      <div class="card-body">
+        <div class="clip-list" id="clipList">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
+            <div>Belum ada klip.</div>
+            <div style="margin-top:4px">Tandai In &amp; Out, atau pakai <b>AI Highlight</b>.</div>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top:14px">
+          <button class="ghost tiny" id="exportJsonBtn">⬇ JSON</button>
+          <button class="ghost tiny" id="exportSrtBtn">⬇ SRT</button>
+          <button class="ghost tiny" id="exportCsvBtn">⬇ CSV</button>
+          <button class="ghost tiny" id="importBtn">⬆ Import</button>
+          <button class="danger tiny" id="clearAllBtn">🗑 Hapus</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" hidden />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--muted);line-height:2">
+          <b style="color:#9aa3b8;letter-spacing:.5px">SHORTCUT</b><br>
+          <kbd>Space</kbd> Play/Pause &nbsp; <kbd>I</kbd> In &nbsp; <kbd>O</kbd> Out<br>
+          <kbd>C</kbd> Tambah klip &nbsp; <kbd>←</kbd><kbd>→</kbd> ±5s &nbsp;
+          <kbd>J</kbd><kbd>L</kbd> ±10s
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════ SETTINGS MODAL ═══════════ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <h3>Pengaturan</h3>
+      <button class="ghost icon-only" id="closeSettingsBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Gemini API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." autocomplete="off" />
+        <div class="help-text">
+          Dapatkan gratis di
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+          Key disimpan hanya di <b>localStorage browser</b> kamu dan dikirim langsung ke Google.
+          Jangan pakai di komputer publik.
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label class="field-label">
+          Model
+          <span id="modelCountLabel" style="color:var(--muted-2);font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px"></span>
+        </label>
+        <div class="model-picker">
+          <select id="modelSelect">
+            <option value="">— Isi &amp; test API key dulu —</option>
+          </select>
+          <button class="ghost icon-only" id="refreshModelsBtn" title="Refresh daftar model dari API">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+        </div>
+        <div class="model-status" id="modelStatus">
+          <span class="dot"></span>
+          <span id="modelStatusText">Belum ada model dimuat</span>
+        </div>
+        <div class="model-meta hidden" id="modelMeta"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="btn-row">
+        <button class="ghost" id="testApiBtn">🔌 Test &amp; Muat Model</button>
+        <button class="danger" id="clearApiBtn">🗑 Hapus Key</button>
+      </div>
+      <div class="ai-log hidden" id="settingsLog" style="margin-top:10px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost" id="cancelSettingsBtn">Batal</button>
+      <button class="primary" id="saveSettingsBtn">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ═════════════════════════════════════════════════════════════════
+   YT CLIP STUDIO PRO — v3
+   Dynamic Gemini model list from ListModels API.
+   ═════════════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+
+  const MODELS_CACHE_TTL = 1000 * 60 * 60 * 6; // 6 jam
+
+  const state = {
+    // player
+    player: null,
+    playerReady: false,
+    videoId: null,
+    videoUrl: null,
+    duration: 0,
+    currentTime: 0,
+    isPlaying: false,
+    muted: false,
+    speedIdx: 0,
+    speeds: [1, 1.25, 1.5, 1.75, 2, 0.5, 0.75],
+    tickTimer: null,
+
+    // in/out
+    inPoint: null,
+    outPoint: null,
+
+    // clips
+    clips: [],
+    playingClipId: null,
+
+    // ai
+    apiKey: "",
+    model: "",
+    availableModels: [],     // dari API
+    modelsFetchedAt: 0,
+    modelsSourceKeyHash: "",
+    transcript: null,
+    transcriptRaw: "",
+    aiBusy: false,
+    focus: "general",
+
+    // ui
+    currentTab: "tab-transcript"
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const dom = {
+    urlInput: $("urlInput"),
+    loadBtn: $("loadBtn"),
+    playerPlaceholder: $("playerPlaceholder"),
+    videoIdChip: $("videoIdChip"),
+    playBtn: $("playBtn"),
+    back10Btn: $("back10Btn"),
+    fwd10Btn: $("fwd10Btn"),
+    curTime: $("curTime"),
+    durTime: $("durTime"),
+    progressTrack: $("progressTrack"),
+    progressFill: $("progressFill"),
+    markInEl: $("markInEl"),
+    markOutEl: $("markOutEl"),
+    aiMarksContainer: $("aiMarksContainer"),
+    speedBtn: $("speedBtn"),
+    muteBtn: $("muteBtn"),
+    inVal: $("inVal"),
+    outVal: $("outVal"),
+    markInBtn: $("markInBtn"),
+    markOutBtn: $("markOutBtn"),
+    clearInBtn: $("clearInBtn"),
+    clearOutBtn: $("clearOutBtn"),
+    addClipBtn: $("addClipBtn"),
+    resetIOBtn: $("resetIOBtn"),
+
+    clipList: $("clipList"),
+    clipCountChip: $("clipCountChip"),
+    statClips: $("statClips"),
+    statDuration: $("statDuration"),
+    statAI: $("statAI"),
+
+    apiStatusDot: $("apiStatusDot"),
+    apiStatusText: $("apiStatusText"),
+    aiStatus: $("aiStatus"),
+    aiStatusText: $("aiStatusText"),
+    aiModelChip: $("aiModelChip"),
+    aiLog: $("aiLog"),
+    aiTabs: $("aiTabs"),
+
+    fetchTranscriptBtn: $("fetchTranscriptBtn"),
+    copyTranscriptBtn: $("copyTranscriptBtn"),
+    transcriptBox: $("transcriptBox"),
+
+    highlightCount: $("highlightCount"),
+    highlightDuration: $("highlightDuration"),
+    focusPills: $("focusPills"),
+    findHighlightsBtn: $("findHighlightsBtn"),
+
+    customPrompt: $("customPrompt"),
+    customAskBtn: $("customAskBtn"),
+    customAnswerBox: $("customAnswerBox"),
+
+    settingsModal: $("settingsModal"),
+    openSettingsBtn: $("openSettingsBtn"),
+    closeSettingsBtn: $("closeSettingsBtn"),
+    cancelSettingsBtn: $("cancelSettingsBtn"),
+    saveSettingsBtn: $("saveSettingsBtn"),
+    apiKeyInput: $("apiKeyInput"),
+    modelSelect: $("modelSelect"),
+    modelCountLabel: $("modelCountLabel"),
+    refreshModelsBtn: $("refreshModelsBtn"),
+    modelStatus: $("modelStatus"),
+    modelStatusText: $("modelStatusText"),
+    modelMeta: $("modelMeta"),
+    testApiBtn: $("testApiBtn"),
+    clearApiBtn: $("clearApiBtn"),
+    settingsLog: $("settingsLog"),
+
+    exportJsonBtn: $("exportJsonBtn"),
+    exportSrtBtn: $("exportSrtBtn"),
+    exportCsvBtn: $("exportCsvBtn"),
+    importBtn: $("importBtn"),
+    importFile: $("importFile"),
+    clearAllBtn: $("clearAllBtn"),
+
+    toastWrap: $("toastWrap")
+  };
+
+  /* ─────────────────── UTILS ─────────────────── */
+  function fmt(t) {
+    if (t == null || isNaN(t)) return "--:--.-";
+    t = Math.max(0, t);
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    const d = Math.floor((t % 1) * 10);
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${d}`;
+  }
+  function fmtSrt(sec) {
+    if (sec == null || isNaN(sec)) return "00:00:00,000";
+    sec = Math.max(0, sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    const ms = Math.floor((sec % 1) * 1000);
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")},${String(ms).padStart(3,"0")}`;
+  }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function round1(n) { return Math.round(n * 10) / 10; }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+  function download(filename, text, mime) {
+    const blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function formatTokens(n) {
+    if (!n && n !== 0) return "";
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + "M";
+    if (n >= 1_000) return (n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1) + "k";
+    return String(n);
+  }
+  function simpleHash(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+
+  function toast(msg, type) {
+    const el = document.createElement("div");
+    el.className = "toast " + (type || "");
+    el.innerHTML = `<span class="dot"></span><span>${esc(msg)}</span>`;
+    dom.toastWrap.appendChild(el);
+    setTimeout(() => {
+      el.style.transition = "opacity .3s, transform .3s";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(12px)";
+      setTimeout(() => el.remove(), 320);
+    }, 3000);
+  }
+  function setApiStatus(kind, text) {
+    dom.apiStatusDot.className = "status-dot" + (kind ? " " + kind : "");
+    dom.apiStatusText.textContent = text.replace(/<[^>]*>/g, "");
+    dom.aiStatus.className = "ai-status" + (kind ? " " + kind : "");
+    dom.aiStatusText.innerHTML = text;
+  }
+  function aiLog(msg, cls) {
+    dom.aiLog.classList.remove("hidden");
+    const line = document.createElement("div");
+    line.className = cls || "";
+    const ts = new Date().toLocaleTimeString("id-ID", { hour12: false });
+    line.textContent = `[${ts}] ${msg}`;
+    dom.aiLog.appendChild(line);
+    dom.aiLog.scrollTop = dom.aiLog.scrollHeight;
+  }
+  function settingsLog(msg, cls) {
+    dom.settingsLog.classList.remove("hidden");
+    const line = document.createElement("div");
+    line.className = cls || "";
+    line.textContent = msg;
+    dom.settingsLog.appendChild(line);
+    dom.settingsLog.scrollTop = dom.settingsLog.scrollHeight;
+  }
+  function setModelStatus(kind, text) {
+    dom.modelStatus.className = "model-status" + (kind ? " " + kind : "");
+    dom.modelStatusText.textContent = text;
+  }
+
+  /* ─────────────────── YOUTUBE URL PARSER ─────────────────── */
+  function parseVideoId(url) {
+    if (!url) return null;
+    url = url.trim();
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+    try {
+      const u = new URL(url.startsWith("http") ? url : "https://" + url);
+      const host = u.hostname.replace(/^www\./, "").toLowerCase();
+      if (host === "youtu.be") {
+        const id = u.pathname.slice(1).split("/")[0];
+        return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+      }
+      if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+        const v = u.searchParams.get("v");
+        if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+        const m = u.pathname.match(/\/(embed|shorts|live|v)\/([a-zA-Z0-9_-]{11})/);
+        if (m) return m[2];
+      }
+    } catch (e) {}
+    const m = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) ||
+              url.match(/(?:youtu\.be\/|\/shorts\/|\/embed\/|\/live\/|\/v\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+
+  /* ─────────────────── YT IFRAME API ─────────────────── */
+  let ytApiReady = false;
+  const ytQueue = [];
+  window.onYouTubeIframeAPIReady = function () {
+    ytApiReady = true;
+    ytQueue.forEach(fn => { try { fn(); } catch(e){ console.error(e); } });
+    ytQueue.length = 0;
+  };
+  function whenYTReady(fn) { ytApiReady ? fn() : ytQueue.push(fn); }
+  (function injectYT() {
+    if (document.querySelector("script[data-yt-api]")) return;
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.setAttribute("data-yt-api", "1");
+    document.head.appendChild(s);
+  })();
+
+  function loadVideo(videoId) {
+    if (!videoId) { toast("URL YouTube tidak valid", "err"); return; }
+    state.videoId = videoId;
+    state.videoUrl = "https://www.youtube.com/watch?v=" + videoId;
+    dom.videoIdChip.textContent = videoId;
+    dom.playerPlaceholder.classList.add("hidden");
+
+    whenYTReady(() => {
+      if (state.player) { state.player.loadVideoById(videoId); return; }
+      state.player = new YT.Player("player", {
+        videoId: videoId,
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin, enablejsapi: 1 },
+        events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
+      });
+    });
+  }
+  function onPlayerReady(e) {
+    state.playerReady = true;
+    state.duration = e.target.getDuration() || 0;
+    dom.durTime.textContent = fmt(state.duration);
+    startTick();
+    e.target.playVideo();
+    saveState();
+  }
+  function onPlayerStateChange(e) {
+    const s = e.data;
+    state.isPlaying = (s === YT.PlayerState.PLAYING);
+    updatePlayBtn();
+    if (s === YT.PlayerState.PLAYING || s === YT.PlayerState.PAUSED) {
+      const d = state.player.getDuration();
+      if (d && Math.abs(d - state.duration) > 0.5) {
+        state.duration = d;
+        dom.durTime.textContent = fmt(d);
+      }
+    }
+    if (s === YT.PlayerState.ENDED) {
+      state.playingClipId = null;
+      renderClips();
+    }
+  }
+  function onPlayerError(e) {
+    const codes = {
+      2: "ID video tidak valid",
+      5: "Video tidak bisa diputar di HTML5 player",
+      100: "Video tidak ditemukan / private",
+      101: "Embed tidak diizinkan oleh pemilik video",
+      150: "Embed tidak diizinkan oleh pemilik video"
+    };
+    toast("Gagal memuat: " + (codes[e.data] || "kode " + e.data), "err");
+  }
+  function updatePlayBtn() {
+    dom.playBtn.innerHTML = state.isPlaying
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>';
+  }
+  function startTick() {
+    if (state.tickTimer) clearInterval(state.tickTimer);
+    state.tickTimer = setInterval(() => {
+      if (!state.player || !state.playerReady) return;
+      const t = state.player.getCurrentTime ? state.player.getCurrentTime() : 0;
+      state.currentTime = t;
+      const d = state.duration || 1;
+      dom.curTime.textContent = fmt(t);
+      dom.progressFill.style.width = Math.min(100, (t / d) * 100) + "%";
+      if (state.playingClipId) {
+        const clip = state.clips.find(c => c.id === state.playingClipId);
+        if (clip && t >= clip.end - 0.06) {
+          state.player.pauseVideo();
+          state.playingClipId = null;
+          renderClips();
+        }
+      }
+    }, 100);
+  }
+
+  /* ─────────────────── IN / OUT ─────────────────── */
+  function markIn() {
+    if (!state.playerReady) return toast("Muat video dulu", "err");
+    state.inPoint = state.player.getCurrentTime();
+    dom.inVal.textContent = fmt(state.inPoint);
+    updateMarks();
+    toast("In: " + fmt(state.inPoint), "ok");
+  }
+  function markOut() {
+    if (!state.playerReady) return toast("Muat video dulu", "err");
+    state.outPoint = state.player.getCurrentTime();
+    dom.outVal.textContent = fmt(state.outPoint);
+    updateMarks();
+    toast("Out: " + fmt(state.outPoint), "ok");
+  }
+  function clearIn() { state.inPoint = null; dom.inVal.textContent = "--:--.-"; updateMarks(); }
+  function clearOut() { state.outPoint = null; dom.outVal.textContent = "--:--.-"; updateMarks(); }
+  function resetIO() { clearIn(); clearOut(); }
+  function updateMarks() {
+    const d = state.duration || 1;
+    if (state.inPoint != null) {
+      dom.markInEl.style.display = "block";
+      dom.markInEl.style.left = (state.inPoint / d * 100) + "%";
+    } else dom.markInEl.style.display = "none";
+    if (state.outPoint != null) {
+      dom.markOutEl.style.display = "block";
+      dom.markOutEl.style.left = (state.outPoint / d * 100) + "%";
+    } else dom.markOutEl.style.display = "none";
+  }
+  function renderAiMarks() {
+    dom.aiMarksContainer.innerHTML = "";
+    if (!state.duration) return;
+    state.clips.filter(c => c.source === "ai").forEach(c => {
+      [c.start, c.end].forEach(t => {
+        const mark = document.createElement("div");
+        mark.className = "progress-mark ai";
+        mark.style.display = "block";
+        mark.style.left = (t / state.duration * 100) + "%";
+        dom.aiMarksContainer.appendChild(mark);
+      });
+    });
+  }
+
+  /* ─────────────────── CLIPS ─────────────────── */
+  function addClip(opts) {
+    opts = opts || {};
+    if (!state.playerReady && !opts.force) return toast("Muat video dulu", "err");
+    const t = state.currentTime;
+    let start = opts.start != null ? opts.start : state.inPoint;
+    let end = opts.end != null ? opts.end : state.outPoint;
+    if (!opts.force) {
+      if (start == null && end == null) return toast("Tandai In dan Out dulu", "err");
+      if (start == null) start = 0;
+      if (end == null) end = t;
+    }
+    if (end <= start) return toast("Out harus lebih besar dari In", "err");
+
+    const clip = {
+      id: uid(),
+      name: opts.name || ("Klip " + (state.clips.length + 1)),
+      start: round1(start),
+      end: round1(end),
+      score: opts.score != null ? opts.score : null,
+      reason: opts.reason || "",
+      source: opts.source || "manual"
+    };
+    state.clips.push(clip);
+    saveState();
+    renderClips();
+    if (!opts.silent) {
+      resetIO();
+      toast("Klip ditambah (" + (clip.end - clip.start).toFixed(1) + "s)", "ok");
+    }
+  }
+  function playClip(id) {
+    const clip = state.clips.find(c => c.id === id);
+    if (!clip || !state.player) return;
+    state.playingClipId = id;
+    state.player.seekTo(clip.start, true);
+    state.player.playVideo();
+    renderClips();
+  }
+  function jumpClip(id) {
+    const clip = state.clips.find(c => c.id === id);
+    if (!clip || !state.player) return;
+    state.player.seekTo(clip.start, true);
+  }
+  function deleteClip(id) {
+    state.clips = state.clips.filter(c => c.id !== id);
+    if (state.playingClipId === id) state.playingClipId = null;
+    saveState();
+    renderClips();
+    renderAiMarks();
+  }
+  function renameClip(id, name) {
+    const c = state.clips.find(x => x.id === id);
+    if (c) { c.name = name; saveState(); }
+  }
+  function copyClipLink(id) {
+    const c = state.clips.find(x => x.id === id);
+    if (!c || !state.videoId) return;
+    const url = `https://youtu.be/${state.videoId}?t=${Math.floor(c.start)}`;
+    navigator.clipboard.writeText(url).then(() => toast("Link disalin", "ok")).catch(() => toast(url, "warn"));
+  }
+  function trimClip(id) {
+    const c = state.clips.find(x => x.id === id);
+    if (!c) return;
+    state.inPoint = c.start;
+    state.outPoint = c.end;
+    dom.inVal.textContent = fmt(c.start);
+    dom.outVal.textContent = fmt(c.end);
+    updateMarks();
+    state.player.seekTo(c.start, true);
+    toast("In/Out diset dari klip", "ok");
+  }
+  function scoreClass(score) {
+    if (score == null) return "";
+    if (score >= 80) return "hot";
+    if (score >= 60) return "warm";
+    return "cool";
+  }
+  function renderClips() {
+    const n = state.clips.length;
+    dom.clipCountChip.textContent = n;
+    dom.statClips.textContent = n;
+    dom.statAI.textContent = state.clips.filter(c => c.source === "ai").length;
+    const totalDur = state.clips.reduce((a, c) => a + (c.end - c.start), 0);
+    dom.statDuration.textContent = totalDur >= 60 ? Math.round(totalDur / 60) + "m" : Math.round(totalDur) + "s";
+
+    if (!n) {
+      dom.clipList.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
+          <div>Belum ada klip.</div>
+          <div style="margin-top:4px">Tandai In &amp; Out, atau pakai <b>AI Highlight</b>.</div>
+        </div>`;
+      return;
+    }
+    dom.clipList.innerHTML = state.clips.map(c => {
+      const sc = scoreClass(c.score);
+      const scoreHtml = c.score != null ? `<span class="clip-score ${sc}">${c.score}</span>` : "";
+      const aiTag = c.source === "ai" ? `<span class="clip-tag">AI</span>` : "";
+      const reasonHtml = c.reason ? `<div style="font-size:11px;color:var(--muted-2);line-height:1.5">${esc(c.reason)}</div>` : "";
+      return `
+        <div class="clip-item ${state.playingClipId === c.id ? "playing" : ""} ${c.source === "ai" ? "ai-generated" : ""}" data-id="${c.id}">
+          <div class="clip-top">
+            <input class="clip-name" value="${esc(c.name)}" data-name="${c.id}" />
+            ${aiTag}${scoreHtml}
+          </div>
+          <div class="clip-meta">
+            <span><b>IN</b> ${fmt(c.start)}</span>
+            <span><b>OUT</b> ${fmt(c.end)}</span>
+            <span><b>DUR</b> ${(c.end - c.start).toFixed(1)}s</span>
+          </div>
+          ${reasonHtml}
+          <div class="clip-actions">
+            <button data-play="${c.id}" title="Putar klip">▶ Play</button>
+            <button data-jump="${c.id}" title="Lompat ke In">⤓</button>
+            <button data-trim="${c.id}" title="Set In/Out dari klip">✂</button>
+            <button data-link="${c.id}" title="Copy link timestamp">🔗</button>
+            <button class="danger" data-del="${c.id}" title="Hapus">✕</button>
+          </div>
+        </div>`;
+    }).join("");
+  }
+  dom.clipList.addEventListener("click", (e) => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.play) playClip(t.dataset.play);
+    else if (t.dataset.jump) jumpClip(t.dataset.jump);
+    else if (t.dataset.trim) trimClip(t.dataset.trim);
+    else if (t.dataset.link) copyClipLink(t.dataset.link);
+    else if (t.dataset.del) deleteClip(t.dataset.del);
+  });
+  dom.clipList.addEventListener("input", (e) => {
+    if (e.target.dataset.name) renameClip(e.target.dataset.name, e.target.value);
+  });
+
+  /* ═══════════════════════════════════════════
+     GEMINI MODELS — dynamic listing
+     ═══════════════════════════════════════════ */
+  const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta";
+
+  function modelRank(name) {
+    const m = name.match(/gemini-(\d+)(?:\.(\d+))?-(\w+)/i);
+    if (!m) return { version: 0, variant: 0 };
+    const version = parseInt(m[1] || "0", 10) * 10 + parseInt(m[2] || "0", 10);
+    const variants = { ultra: 4, pro: 3, flash: 2, lite: 1, nano: 0 };
+    return { version, variant: variants[(m[3] || "").toLowerCase()] || 0 };
+  }
+
+  async function fetchAvailableModels(apiKey) {
+    if (!apiKey) throw new Error("API key kosong");
+    const url = `${GEMINI_ENDPOINT}/models?key=${encodeURIComponent(apiKey)}&pageSize=200`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      let msg = "HTTP " + res.status;
+      try {
+        const j = await res.json();
+        if (j.error && j.error.message) msg = j.error.message;
+      } catch (e) {}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    const all = (data.models || []).filter(m => {
+      const methods = m.supportedGenerationMethods || [];
+      const name = m.name || "";
+      // hanya model gemini yang support generateContent
+      return /gemini/i.test(name) && methods.includes("generateContent");
+    });
+    all.sort((a, b) => {
+      const ra = modelRank(a.name), rb = modelRank(b.name);
+      if (rb.version !== ra.version) return rb.version - ra.version;
+      if (rb.variant !== ra.variant) return rb.variant - ra.variant;
+      return a.name.localeCompare(b.name);
+    });
+    return all;
+  }
+
+  function populateModelSelect(models) {
+    const sel = dom.modelSelect;
+    const prev = state.model;
+    sel.innerHTML = "";
+    if (!models.length) {
+      sel.innerHTML = '<option value="">— Tidak ada model tersedia —</option>';
+      dom.modelCountLabel.textContent = "";
+      return;
+    }
+    models.forEach(m => {
+      const id = m.name.replace(/^models\//, "");
+      const opt = document.createElement("option");
+      opt.value = id;
+      const label = m.displayName || id;
+      const inTok = m.inputTokenLimit ? formatTokens(m.inputTokenLimit) + " in" : "";
+      const outTok = m.outputTokenLimit ? formatTokens(m.outputTokenLimit) + " out" : "";
+      const hint = [inTok, outTok].filter(Boolean).join(" · ");
+      opt.textContent = hint ? `${label} — ${hint}` : label;
+      opt.title = (m.description || "").slice(0, 200);
+      sel.appendChild(opt);
+    });
+    dom.modelCountLabel.textContent = `(${models.length} tersedia)`;
+
+    // restore atau auto-pick
+    const ids = models.map(m => m.name.replace(/^models\//, ""));
+    if (prev && ids.includes(prev)) {
+      sel.value = prev;
+    } else {
+      const preferred = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+      let picked = preferred.find(p => ids.includes(p));
+      if (!picked) picked = ids[0];
+      sel.value = picked;
+      state.model = picked;
+    }
+    updateModelMeta();
+    updateAiModelChip();
+  }
+
+  function updateModelMeta() {
+    const id = dom.modelSelect.value;
+    const m = state.availableModels.find(x => x.name.replace(/^models\//, "") === id);
+    if (!m) { dom.modelMeta.classList.add("hidden"); return; }
+    const parts = [];
+    if (m.description) parts.push(esc(m.description));
+    const kv = [];
+    if (m.inputTokenLimit) kv.push(`<span><b>Input</b> ${formatTokens(m.inputTokenLimit)} token</span>`);
+    if (m.outputTokenLimit) kv.push(`<span><b>Output</b> ${formatTokens(m.outputTokenLimit)} token</span>`);
+    if (m.supportedGenerationMethods) {
+      kv.push(`<span><b>Methods</b> ${m.supportedGenerationMethods.join(", ")}</span>`);
+    }
+    dom.modelMeta.innerHTML = parts.join("<br>") + (kv.length ? `<div class="kv">${kv.join("")}</div>` : "");
+    dom.modelMeta.classList.remove("hidden");
+  }
+
+  function updateAiModelChip() {
+    if (!state.model) { dom.aiModelChip.textContent = "—"; return; }
+    const m = state.availableModels.find(x => x.name.replace(/^models\//, "") === state.model);
+    dom.aiModelChip.textContent = m && m.displayName ? m.displayName : state.model;
+  }
+
+  async function refreshModels(opts) {
+    opts = opts || {};
+    const key = (dom.apiKeyInput.value || state.apiKey || "").trim();
+    if (!key) {
+      setModelStatus("err", "Isi API key dulu");
+      return;
+    }
+    setModelStatus("loading", "Memuat daftar model dari Google…");
+    dom.refreshModelsBtn.disabled = true;
+    dom.modelSelect.disabled = true;
+
+    try {
+      const models = await fetchAvailableModels(key);
+      state.availableModels = models;
+      state.modelsFetchedAt = Date.now();
+      state.modelsSourceKeyHash = simpleHash(key);
+      populateModelSelect(models);
+      cacheModels(key, models);
+      setModelStatus("live", `✓ ${models.length} model dimuat dari API Google`);
+      if (!opts.silent) settingsLog(`✓ ${models.length} model tersedia dari API`, "ln-ok");
+    } catch (err) {
+      setModelStatus("err", "✗ Gagal: " + err.message);
+      if (!opts.silent) settingsLog("✗ Gagal memuat model: " + err.message, "ln-err");
+      // fallback ke cache kalau ada
+      const cached = loadCachedModels(key);
+      if (cached && cached.models.length) {
+        state.availableModels = cached.models;
+        state.modelsFetchedAt = cached.fetchedAt;
+        state.modelsSourceKeyHash = simpleHash(key);
+        populateModelSelect(cached.models);
+        setModelStatus("cached", `Menggunakan cache (${cached.models.length} model)`);
+      }
+    } finally {
+      dom.refreshModelsBtn.disabled = false;
+      dom.modelSelect.disabled = false;
+    }
+  }
+
+  function cacheModels(key, models) {
+    try {
+      localStorage.setItem("ytcs.modelsCache", JSON.stringify({
+        keyHash: simpleHash(key),
+        fetchedAt: Date.now(),
+        models: models
+      }));
+    } catch (e) {}
+  }
+  function loadCachedModels(key) {
+    try {
+      const raw = localStorage.getItem("ytcs.modelsCache");
+      if (!raw) return null;
+      const c = JSON.parse(raw);
+      if (c.keyHash !== simpleHash(key)) return null;
+      return c;
+    } catch (e) { return null; }
+  }
+  function tryRestoreModelsFromCache() {
+    const key = state.apiKey;
+    if (!key) return false;
+    const c = loadCachedModels(key);
+    if (!c || !c.models || !c.models.length) return false;
+    // TTL check
+    if (Date.now() - c.fetchedAt > MODELS_CACHE_TTL) return false;
+    state.availableModels = c.models;
+    state.modelsFetchedAt = c.fetchedAt;
+    state.modelsSourceKeyHash = simpleHash(key);
+    populateModelSelect(c.models);
+    const ageMin = Math.round((Date.now() - c.fetchedAt) / 60000);
+    setModelStatus("cached", `Cache: ${c.models.length} model (${ageMin} menit lalu)`);
+    return true;
+  }
+
+  /* ─────────────────── GEMINI CALL ─────────────────── */
+  async function callGemini(parts, opts) {
+    if (!state.apiKey) throw new Error("API key belum diatur");
+    if (!state.model) throw new Error("Model belum dipilih");
+    opts = opts || {};
+    const model = opts.model || state.model;
+    const url = `${GEMINI_ENDPOINT}/models/${model}:generateContent?key=${encodeURIComponent(state.apiKey)}`;
+    const body = {
+      contents: [{ parts }],
+      generationConfig: opts.generationConfig || {},
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+      ]
+    };
+    if (opts.systemInstruction) {
+      body.systemInstruction = { parts: [{ text: opts.systemInstruction }] };
+    }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      let msg = `HTTP ${res.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error && errJson.error.message) msg = errJson.error.message;
+      } catch (e) {}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (!data.candidates || !data.candidates.length) {
+      const fb = data.promptFeedback && data.promptFeedback.blockReason;
+      throw new Error(fb ? "Diblokir: " + fb : "Tidak ada respons dari model");
+    }
+    const parts_out = data.candidates[0].content && data.candidates[0].content.parts;
+    if (!parts_out || !parts_out.length) throw new Error("Respons kosong");
+    return parts_out.map(p => p.text || "").join("");
+  }
+  function videoPart() { return { file_data: { file_uri: state.videoUrl } }; }
+  function textPart(text) { return { text }; }
+
+  /* ─────────────────── TRANSCRIPT ─────────────────── */
+  async function fetchTranscript() {
+    if (!state.videoUrl) return toast("Muat video dulu", "err");
+    if (!state.apiKey) return toast("Set API key dulu di Settings", "err");
+    if (!state.model) return toast("Pilih model dulu di Settings", "err");
+    if (state.aiBusy) return;
+
+    state.aiBusy = true;
+    setApiStatus("busy", "Mengambil transkrip…");
+    aiLog("Meminta transkrip dari " + state.model + "…", "ln-info");
+    dom.fetchTranscriptBtn.disabled = true;
+    dom.fetchTranscriptBtn.innerHTML = '<span class="spinner"></span> Memproses…';
+
+    const prompt = `Transcribe this video in full detail.
+Requirements:
+1. Provide the complete spoken transcript.
+2. Include accurate timestamps for each segment in the format [MM:SS].
+3. Preserve the original spoken language (do NOT translate).
+4. Format output as clean plain text, one segment per line, starting with the timestamp.
+
+Example output format:
+[00:00] Selamat datang di video ini…
+[00:12] Hari ini kita akan membahas…
+[00:25] Pertama-tama…`;
+
+    try {
+      const text = await callGemini(
+        [videoPart(), textPart(prompt)],
+        { systemInstruction: "You are a precise transcription assistant. Output only the requested transcript, no preamble." }
+      );
+      state.transcriptRaw = text;
+      dom.transcriptBox.classList.remove("hidden");
+      dom.transcriptBox.innerHTML = esc(text).replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, '<span class="ts">[$1]</span>');
+      dom.copyTranscriptBtn.disabled = false;
+      aiLog("Transkrip berhasil (" + text.length + " karakter)", "ln-ok");
+      setApiStatus("on", "API aktif · Transkrip siap");
+      toast("Transkrip berhasil diambil", "ok");
+    } catch (err) {
+      aiLog("Error: " + err.message, "ln-err");
+      setApiStatus("err", "Error: " + err.message);
+      toast("Gagal: " + err.message, "err");
+    } finally {
+      state.aiBusy = false;
+      dom.fetchTranscriptBtn.disabled = false;
+      dom.fetchTranscriptBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Ambil Transkrip';
+    }
+  }
+
+  /* ─────────────────── HIGHLIGHT ─────────────────── */
+  const FOCUS_PROMPTS = {
+    general: "interesting, engaging, and shareable moments",
+    funny: "funny, humorous, or comedic moments that would make people laugh",
+    educational: "educational, informative, or explanatory moments where real value is delivered",
+    emotional: "emotionally powerful, moving, or heartfelt moments",
+    controversial: "controversial, debate-worthy, or provocative moments",
+    insight: "insightful, surprising, or thought-provoking moments with counterintuitive ideas"
+  };
+
+  async function findHighlights() {
+    if (!state.videoUrl) return toast("Muat video dulu", "err");
+    if (!state.apiKey) return toast("Set API key dulu di Settings", "err");
+    if (!state.model) return toast("Pilih model dulu di Settings", "err");
+    if (state.aiBusy) return;
+
+    const count = parseInt(dom.highlightCount.value, 10) || 5;
+    const targetDur = parseInt(dom.highlightDuration.value, 10) || 30;
+    const focus = FOCUS_PROMPTS[state.focus] || FOCUS_PROMPTS.general;
+    const videoDur = state.duration || 0;
+
+    state.aiBusy = true;
+    setApiStatus("busy", "AI menganalisis video…");
+    aiLog(`Mencari ${count} highlight (${state.focus}, ~${targetDur}s) pakai ${state.model}…`, "ln-info");
+    dom.findHighlightsBtn.disabled = true;
+    dom.findHighlightsBtn.innerHTML = '<span class="spinner"></span> Menganalisis…';
+
+    const prompt = `Analyze this YouTube video carefully. Find the ${count} BEST moments to turn into short standalone clips.
+
+Focus on: ${focus}.
+
+Requirements:
+1. Each clip ~${targetDur} seconds long (±50%).
+2. Clips must be self-contained — understandable without extra context.
+3. Prefer moments with a strong hook in the first 3 seconds.
+4. Avoid intros, outros, sponsor reads, and dead air.
+5. Return ONLY valid JSON, no markdown fences, no commentary.
+
+JSON schema:
+{
+  "clips": [
+    {
+      "start": <number, seconds>,
+      "end": <number, seconds>,
+      "title": "<short catchy title, max 60 chars>",
+      "reason": "<why this is a good clip, max 140 chars>",
+      "score": <integer 0-100>
+    }
+  ]
+}
+
+Video duration: ${videoDur > 0 ? Math.round(videoDur) + " seconds" : "unknown"}.`;
+
+    try {
+      let text = await callGemini(
+        [videoPart(), textPart(prompt)],
+        {
+          systemInstruction: "You are an expert short-form video editor. Output only valid JSON.",
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+        }
+      );
+      text = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) text = jsonMatch[0];
+
+      let parsed;
+      try { parsed = JSON.parse(text); }
+      catch (e) { throw new Error("JSON tidak valid dari model"); }
+      if (!parsed.clips || !Array.isArray(parsed.clips)) throw new Error("Format respons tidak sesuai");
+
+      let added = 0;
+      parsed.clips.forEach((c, i) => {
+        const s = Number(c.start), e = Number(c.end);
+        if (isNaN(s) || isNaN(e) || e <= s) return;
+        addClip({
+          name: c.title || ("AI Highlight " + (i + 1)),
+          start: s, end: e,
+          score: c.score != null ? Math.round(c.score) : null,
+          reason: c.reason || "",
+          source: "ai", force: true, silent: true
+        });
+        added++;
+      });
+      renderClips();
+      renderAiMarks();
+      aiLog(`Selesai: ${added} highlight ditambahkan`, "ln-ok");
+      setApiStatus("on", `API aktif · ${added} highlight ditemukan`);
+      toast(added + " highlight berhasil ditambahkan", "ok");
+    } catch (err) {
+      aiLog("Error: " + err.message, "ln-err");
+      setApiStatus("err", "Error: " + err.message);
+      toast("Gagal: " + err.message, "err");
+    } finally {
+      state.aiBusy = false;
+      dom.findHighlightsBtn.disabled = false;
+      dom.findHighlightsBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></svg> Cari Highlight Otomatis';
+    }
+  }
+
+  /* ─────────────────── CUSTOM ASK ─────────────────── */
+  async function customAsk() {
+    if (!state.videoUrl) return toast("Muat video dulu", "err");
+    if (!state.apiKey) return toast("Set API key dulu di Settings", "err");
+    if (!state.model) return toast("Pilih model dulu di Settings", "err");
+    const q = dom.customPrompt.value.trim();
+    if (!q) return toast("Tulis pertanyaan dulu", "err");
+    if (state.aiBusy) return;
+
+    state.aiBusy = true;
+    setApiStatus("busy", "AI menjawab…");
+    aiLog("Pertanyaan: " + q, "ln-info");
+    dom.customAskBtn.disabled = true;
+    dom.customAskBtn.innerHTML = '<span class="spinner"></span> Berpikir…';
+    dom.customAnswerBox.classList.add("hidden");
+
+    try {
+      const text = await callGemini(
+        [videoPart(), textPart(q)],
+        { systemInstruction: "You are a helpful assistant analyzing a YouTube video. Answer based on the actual video content. If timestamps are relevant, provide them in [MM:SS] format." }
+      );
+      dom.customAnswerBox.classList.remove("hidden");
+      dom.customAnswerBox.innerHTML = esc(text).replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, '<span class="ts">[$1]</span>');
+      aiLog("Jawaban diterima", "ln-ok");
+      setApiStatus("on", "API aktif");
+    } catch (err) {
+      aiLog("Error: " + err.message, "ln-err");
+      setApiStatus("err", "Error: " + err.message);
+      toast("Gagal: " + err.message, "err");
+    } finally {
+      state.aiBusy = false;
+      dom.customAskBtn.disabled = false;
+      dom.customAskBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Tanya AI';
+    }
+  }
+
+  /* ─────────────────── SETTINGS ─────────────────── */
+  function openSettings() {
+    dom.apiKeyInput.value = state.apiKey;
+    dom.settingsLog.innerHTML = "";
+    dom.settingsLog.classList.add("hidden");
+    dom.settingsModal.classList.add("open");
+
+    // Restore models dari cache atau auto-fetch
+    if (state.apiKey) {
+      const restored = tryRestoreModelsFromCache();
+      if (!restored) {
+        // fetch di background
+        setTimeout(() => refreshModels({ silent: false }), 100);
+      }
+    } else {
+      dom.modelSelect.innerHTML = '<option value="">— Isi &amp; test API key dulu —</option>';
+      setModelStatus("", "Belum ada model dimuat");
+      dom.modelMeta.classList.add("hidden");
+      dom.modelCountLabel.textContent = "";
+    }
+  }
+  function closeSettings() { dom.settingsModal.classList.remove("open"); }
+
+  function saveSettings() {
+    const key = dom.apiKeyInput.value.trim();
+    state.apiKey = key;
+    state.model = dom.modelSelect.value || state.model;
+    try {
+      localStorage.setItem("ytcs.apiKey", key);
+      localStorage.setItem("ytcs.model", state.model);
+    } catch (e) {}
+    updateApiStatusFromKey();
+    updateAiModelChip();
+    closeSettings();
+    toast(key ? "Settings disimpan" : "API key dikosongkan", "ok");
+  }
+  function clearApi() {
+    state.apiKey = "";
+    state.model = "";
+    state.availableModels = [];
+    state.modelsSourceKeyHash = "";
+    dom.apiKeyInput.value = "";
+    dom.modelSelect.innerHTML = '<option value="">— Isi &amp; test API key dulu —</option>';
+    dom.modelMeta.classList.add("hidden");
+    dom.modelCountLabel.textContent = "";
+    setModelStatus("", "Belum ada model dimuat");
+    try {
+      localStorage.removeItem("ytcs.apiKey");
+      localStorage.removeItem("ytcs.model");
+      localStorage.removeItem("ytcs.modelsCache");
+    } catch (e) {}
+    updateApiStatusFromKey();
+    updateAiModelChip();
+    toast("API key dihapus", "warn");
+  }
+  function updateApiStatusFromKey() {
+    if (state.apiKey && state.model) {
+      setApiStatus("on", `API aktif · ${state.model}`);
+    } else if (state.apiKey) {
+      setApiStatus("warn", "API key ada, tapi model belum dipilih");
+    } else {
+      setApiStatus("", "API key belum diatur. Klik <b>Settings</b> untuk mengisi.");
+    }
+  }
+
+  async function testApiAndLoadModels() {
+    const key = dom.apiKeyInput.value.trim();
+    if (!key) { settingsLog("Isi API key dulu", "ln-err"); return; }
+
+    dom.testApiBtn.disabled = true;
+    dom.testApiBtn.innerHTML = '<span class="spinner"></span> Testing…';
+    settingsLog("Menguji koneksi ke Gemini API…", "ln-info");
+
+    // 1) load models (ini sekaligus memvalidasi key)
+    try {
+      await refreshModels({ silent: true });
+      if (!state.availableModels.length) throw new Error("Tidak ada model tersedia");
+      settingsLog(`✓ API key valid. ${state.availableModels.length} model ditemukan.`, "ln-ok");
+    } catch (err) {
+      settingsLog("✗ Gagal: " + err.message, "ln-err");
+      dom.testApiBtn.disabled = false;
+      dom.testApiBtn.innerHTML = "🔌 Test &amp; Muat Model";
+      return;
+    }
+
+    // 2) test generateContent dengan model terpilih
+    const model = dom.modelSelect.value;
+    try {
+      const url = `${GEMINI_ENDPOINT}/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: "Reply with exactly: OK" }] }] })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        let msg = "HTTP " + res.status;
+        try { const j = JSON.parse(errText); if (j.error) msg = j.error.message; } catch(e){}
+        throw new Error(msg);
+      }
+      const data = await res.json();
+      const out = data.candidates && data.candidates[0] && data.candidates[0].content &&
+                  data.candidates[0].content.parts && data.candidates[0].content.parts[0].text;
+      settingsLog(`✓ Test generateContent OK (${model}): "${(out || "(kosong)").trim()}"`, "ln-ok");
+      setModelStatus("live", `✓ ${model} siap dipakai`);
+    } catch (err) {
+      settingsLog("✗ generateContent gagal: " + err.message, "ln-err");
+      setModelStatus("err", "generateContent gagal");
+    } finally {
+      dom.testApiBtn.disabled = false;
+      dom.testApiBtn.innerHTML = "🔌 Test &amp; Muat Model";
+    }
+  }
+
+  /* ─────────────────── EXPORT / IMPORT ─────────────────── */
+  function exportJson() {
+    if (!state.clips.length) return toast("Tidak ada klip", "warn");
+    const payload = {
+      app: "YT Clip Studio Pro", version: 3,
+      videoId: state.videoId, videoUrl: state.videoUrl,
+      model: state.model,
+      exportedAt: new Date().toISOString(),
+      clips: state.clips
+    };
+    download("yt-clips-" + (state.videoId || "export") + ".json",
+      JSON.stringify(payload, null, 2), "application/json");
+    toast("JSON diexport", "ok");
+  }
+  function exportSrt() {
+    if (!state.clips.length) return toast("Tidak ada klip", "warn");
+    let out = "";
+    state.clips.forEach((c, i) => {
+      out += `${i + 1}\n${fmtSrt(c.start)} --> ${fmtSrt(c.end)}\n${c.name}\n`;
+      if (c.reason) out += `(${c.reason})\n`;
+      out += "\n";
+    });
+    download("yt-clips-" + (state.videoId || "export") + ".srt", out, "text/plain");
+    toast("SRT diexport", "ok");
+  }
+  function exportCsv() {
+    if (!state.clips.length) return toast("Tidak ada klip", "warn");
+    const rows = [["id","name","start","end","duration","score","source","reason"]];
+    state.clips.forEach(c => {
+      rows.push([
+        c.id, c.name,
+        c.start.toFixed(2), c.end.toFixed(2),
+        (c.end - c.start).toFixed(2),
+        c.score != null ? c.score : "",
+        c.source || "manual",
+        (c.reason || "").replace(/"/g, '""')
+      ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    download("yt-clips-" + (state.videoId || "export") + ".csv", csv, "text/csv");
+    toast("CSV diexport", "ok");
+  }
+  function importJson(file) {
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (!data.clips || !Array.isArray(data.clips)) throw new Error("format");
+        state.clips = data.clips.map(c => ({
+          id: c.id || uid(),
+          name: c.name || "Klip",
+          start: Number(c.start) || 0,
+          end: Number(c.end) || 0,
+          score: c.score != null ? Number(c.score) : null,
+          reason: c.reason || "",
+          source: c.source || "manual"
+        }));
+        if (data.videoId) {
+          state.videoId = data.videoId;
+          state.videoUrl = "https://www.youtube.com/watch?v=" + data.videoId;
+          dom.urlInput.value = state.videoUrl;
+          loadVideo(data.videoId);
+        }
+        saveState();
+        renderClips();
+        renderAiMarks();
+        toast("Import: " + state.clips.length + " klip", "ok");
+      } catch (e) {
+        toast("File JSON tidak valid", "err");
+      }
+    };
+    r.readAsText(file);
+  }
+
+  /* ─────────────────── PERSISTENCE ─────────────────── */
+  function saveState() {
+    try {
+      localStorage.setItem("ytcs.state", JSON.stringify({
+        videoId: state.videoId, clips: state.clips
+      }));
+    } catch (e) {}
+  }
+  function restoreState() {
+    try {
+      state.apiKey = localStorage.getItem("ytcs.apiKey") || "";
+      state.model = localStorage.getItem("ytcs.model") || "";
+      updateApiStatusFromKey();
+      updateAiModelChip();
+
+      // Preload models dari cache kalau ada supaya chip langsung tampil display name
+      if (state.apiKey) tryRestoreModelsFromCache();
+
+      const raw = localStorage.getItem("ytcs.state");
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data.clips) state.clips = data.clips;
+        if (data.videoId) {
+          state.videoId = data.videoId;
+          state.videoUrl = "https://www.youtube.com/watch?v=" + data.videoId;
+          dom.urlInput.value = state.videoUrl;
+          loadVideo(data.videoId);
+        }
+      }
+      renderClips();
+    } catch (e) {}
+  }
+
+  /* ─────────────────── EVENT WIRING ─────────────────── */
+  function wire() {
+    dom.loadBtn.addEventListener("click", () => {
+      const id = parseVideoId(dom.urlInput.value);
+      if (!id) return toast("URL tidak valid", "err");
+      loadVideo(id);
+    });
+    dom.urlInput.addEventListener("keydown", e => { if (e.key === "Enter") dom.loadBtn.click(); });
+
+    dom.playBtn.addEventListener("click", () => {
+      if (!state.playerReady) return toast("Muat video dulu", "err");
+      state.isPlaying ? state.player.pauseVideo() : state.player.playVideo();
+    });
+    dom.back10Btn.addEventListener("click", () => {
+      if (!state.playerReady) return;
+      state.player.seekTo(Math.max(0, state.currentTime - 10), true);
+    });
+    dom.fwd10Btn.addEventListener("click", () => {
+      if (!state.playerReady) return;
+      state.player.seekTo(Math.min(state.duration, state.currentTime + 10), true);
+    });
+    dom.speedBtn.addEventListener("click", () => {
+      if (!state.playerReady) return;
+      state.speedIdx = (state.speedIdx + 1) % state.speeds.length;
+      const s = state.speeds[state.speedIdx];
+      state.player.setPlaybackRate(s);
+      dom.speedBtn.textContent = s + "×";
+    });
+    dom.muteBtn.addEventListener("click", () => {
+      if (!state.playerReady) return;
+      state.muted = !state.muted;
+      state.muted ? state.player.mute() : state.player.unMute();
+      dom.muteBtn.innerHTML = state.muted
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19" fill="currentColor" stroke="none"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+    });
+    dom.progressTrack.addEventListener("click", e => {
+      if (!state.playerReady) return;
+      const rect = dom.progressTrack.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      state.player.seekTo(pct * state.duration, true);
+    });
+
+    dom.markInBtn.addEventListener("click", markIn);
+    dom.markOutBtn.addEventListener("click", markOut);
+    dom.clearInBtn.addEventListener("click", clearIn);
+    dom.clearOutBtn.addEventListener("click", clearOut);
+    dom.resetIOBtn.addEventListener("click", resetIO);
+    dom.addClipBtn.addEventListener("click", () => addClip());
+
+    dom.aiTabs.addEventListener("click", e => {
+      const btn = e.target.closest(".tab");
+      if (!btn) return;
+      state.currentTab = btn.dataset.tab;
+      dom.aiTabs.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      $(btn.dataset.tab).classList.add("active");
+    });
+
+    dom.focusPills.addEventListener("click", e => {
+      const p = e.target.closest(".pill");
+      if (!p) return;
+      dom.focusPills.querySelectorAll(".pill").forEach(x => x.classList.remove("active"));
+      p.classList.add("active");
+      state.focus = p.dataset.val;
+    });
+
+    dom.fetchTranscriptBtn.addEventListener("click", fetchTranscript);
+    dom.copyTranscriptBtn.addEventListener("click", () => {
+      if (!state.transcriptRaw) return;
+      navigator.clipboard.writeText(state.transcriptRaw)
+        .then(() => toast("Transkrip disalin", "ok"))
+        .catch(() => toast("Gagal menyalin", "err"));
+    });
+    dom.findHighlightsBtn.addEventListener("click", findHighlights);
+    dom.customAskBtn.addEventListener("click", customAsk);
+
+    dom.openSettingsBtn.addEventListener("click", openSettings);
+    dom.closeSettingsBtn.addEventListener("click", closeSettings);
+    dom.cancelSettingsBtn.addEventListener("click", closeSettings);
+    dom.saveSettingsBtn.addEventListener("click", saveSettings);
+    dom.testApiBtn.addEventListener("click", testApiAndLoadModels);
+    dom.clearApiBtn.addEventListener("click", clearApi);
+    dom.refreshModelsBtn.addEventListener("click", () => refreshModels({ silent: false }));
+    dom.settingsModal.addEventListener("click", e => {
+      if (e.target === dom.settingsModal) closeSettings();
+    });
+    dom.modelSelect.addEventListener("change", () => {
+      state.model = dom.modelSelect.value;
+      updateModelMeta();
+      updateAiModelChip();
+      try { localStorage.setItem("ytcs.model", state.model); } catch (e) {}
+    });
+
+    dom.exportJsonBtn.addEventListener("click", exportJson);
+    dom.exportSrtBtn.addEventListener("click", exportSrt);
+    dom.exportCsvBtn.addEventListener("click", exportCsv);
+    dom.importBtn.addEventListener("click", () => dom.importFile.click());
+    dom.importFile.addEventListener("change", e => {
+      const f = e.target.files[0];
+      if (f) importJson(f);
+      e.target.value = "";
+    });
+    dom.clearAllBtn.addEventListener("click", () => {
+      if (!state.clips.length) return;
+      if (!confirm("Hapus semua klip?")) return;
+      state.clips = [];
+      saveState();
+      renderClips();
+      renderAiMarks();
+      toast("Semua klip dihapus", "ok");
+    });
+
+    document.addEventListener("keydown", e => {
+      const tag = (e.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (e.code === "Space") { e.preventDefault(); dom.playBtn.click(); }
+      else if (e.key === "i" || e.key === "I") markIn();
+      else if (e.key === "o" || e.key === "O") markOut();
+      else if (e.key === "c" || e.key === "C") addClip();
+      else if (e.key === "ArrowLeft") { e.preventDefault(); state.player && state.player.seekTo(Math.max(0, state.currentTime - 5), true); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); state.player && state.player.seekTo(Math.min(state.duration, state.currentTime + 5), true); }
+      else if (e.key === "j" || e.key === "J") { state.player && state.player.seekTo(Math.max(0, state.currentTime - 10), true); }
+      else if (e.key === "l" || e.key === "L") { state.player && state.player.seekTo(Math.min(state.duration, state.currentTime + 10), true); }
+    });
+  }
+
+  /* ─────────────────── INIT ─────────────────── */
+  wire();
+  updatePlayBtn();
+  restoreState();
+
+  window.__ytcs = { state, parseVideoId, loadVideo, fetchAvailableModels };
+
+})();
+</script>
+</body>
+</html>
